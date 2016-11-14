@@ -27,11 +27,11 @@ class AlignCameras
     pose2{0.362, -0.597, 0.418, 0.1, 0.503, 2.066}
     {
 
-      target_received = false;
-      input_received = false;
+      cloud1_received = false;
+      cloud2_received = false;
       transformed_made = false;
-      target_sub = nh.subscribe<PointCloud>("/camera1/depth_registered/points", 1, &AlignCameras::SetTargetCloud, this);
-      input_sub = nh.subscribe<PointCloud>("/camera2/depth_registered/points", 1, &AlignCameras::SetInputCloud, this);
+      cloud1_sub = nh.subscribe<PointCloud>("/camera1/depth_registered/points", 1, &AlignCameras::SetCloud1, this);
+      cloud2_sub = nh.subscribe<PointCloud>("/camera2/depth_registered/points", 1, &AlignCameras::SetCloud2, this);
 
       // transform1.setOrigin( tf::Vector3(-0.7, 0.0, 0.41) );
       // q.setRPY(0, 0.5, 0);
@@ -59,7 +59,7 @@ class AlignCameras
 
     void UpdateVis()
     {
-      if(target_received)
+      if(cloud1_received)
       {
         // Coloring and visualizing target cloud
         pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ>
@@ -72,6 +72,25 @@ class AlignCameras
 
     void IcpAlign()
     {
+      PointCloud::Ptr target_cloud (new PointCloud);
+      PointCloud::Ptr input_cloud (new PointCloud);
+      std::vector<int> indicies;
+
+      pcl::removeNaNFromPointCloud(*cloud1, *target_cloud, indicies);
+      zfilter(target_cloud, zlim);
+      PositionCloud(target_cloud, pose1);
+      pcl::removeNaNFromPointCloud(*cloud2, *input_cloud, indicies);
+      zfilter(input_cloud, zlim);
+      PositionCloud(input_cloud, pose2);
+      
+      pcl::IterativeClosestPoint<PointXYZ, PointXYZ> icp;
+      icp.setTransformationEpsilon(1e-7);
+      icp.setMaxCorrespondenceDistance(0.03);
+      icp.setInputSource(input_cloud);
+      icp.setInputTarget(target_cloud);
+      // icp.setUseReciprocalCorrespondences(true);
+      icp.align(*transformed_cloud);
+      PointCloud::Ptr transformed_cloud (new PointCloud);
       
     }
  
@@ -82,34 +101,37 @@ class AlignCameras
     ros::NodeHandle nh;
     PointCloud::Ptr target_cloud;
     PointCloud::Ptr input_cloud;
-    ros::Subscriber target_sub;
-    ros::Subscriber input_sub;
-    bool target_received;
-    bool input_received;
+    PointCloud::Ptr cloud1;
+    PointCloud::Ptr cloud2;
+    ros::Subscriber cloud1_sub;
+    ros::Subscriber cloud2_sub;
+    bool cloud1_received;
+    bool cloud2_received;
     bool transformed_made;
-    std::vector<int> indicies;
     float zlim;
  
-    void SetTargetCloud(const PointCloud::ConstPtr& msg)
+    void SetCloud1(const PointCloud::ConstPtr& msg)
     {
-      pcl::removeNaNFromPointCloud(*msg, *target_cloud, indicies);
-      zfilter(target_cloud, zlim);
-      if(!target_received)
+      //  pcl::removeNaNFromPointCloud(*msg, *target_cloud, indicies);
+      //  zfilter(target_cloud, zlim);
+      if(!cloud1_received)
       {
-        target_received = true;
-        std::cout << "target cloud received" << std::endl;
-        UpdateVis();
+        *cloud1 = *msg;
+        cloud1_received = true;
+        std::cout << "cloud1 received" << std::endl;
+        // UpdateVis();
       }
     }
 
-    void SetInputCloud(const PointCloud::ConstPtr& msg)
+    void SetCloud2(const PointCloud::ConstPtr& msg)
     {
-      pcl::removeNaNFromPointCloud(*msg, *input_cloud, indicies);
-      zfilter(input_cloud, zlim);
-      if(!input_received)
+      //  pcl::removeNaNFromPointCloud(*msg, *input_cloud, indicies);
+      //  zfilter(input_cloud, zlim);
+      if(!cloud2_received)
       {
-        input_received = true;
-        std::cout << "input cloud received" << std::endl;
+        *cloud2 = *msg;
+        cloud2_received = true;
+        std::cout << "cloud2 received" << std::endl;
       }
     }
 
