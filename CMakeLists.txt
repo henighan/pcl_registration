@@ -4,13 +4,14 @@ project(pcl_registration)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  rospy
-  pcl_conversions
-  pcl_msgs
-  pcl_ros
-)
+find_package(catkin REQUIRED COMPONENTS roscpp rospy pcl_ros pcl_msgs pcl_conversions)
+# find_package(catkin REQUIRED COMPONENTS
+#   roscpp
+#   rospy
+#   pcl_conversions
+#   pcl_msgs
+#   pcl_ros
+# )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
